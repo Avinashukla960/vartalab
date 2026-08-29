@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACT-LAB — VARTALAB</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%236d5cff'/><text x='50' y='72' font-size='62' font-weight='bold' font-family='Arial' fill='white' text-anchor='middle'>V</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: { base:'#0b0f1a', card:'#151b2b', accent:'#6d5cff', cyan2:'#22d3ee' } } } };
+</script>
+<link rel="stylesheet" href="css/style.css">
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</head>
+<body>
+<main>
+  <section class="section" style="padding-top:44px">
+    <div class="wrap">
+      <div class="flex-between mb-4">
+        <div>
+          <span class="eyebrow">Do English, don't just study it</span>
+          <h2>🎤 ACT-LAB</h2>
+          <p class="muted" style="margin:6px 0 0">Debates, movie nights, poetry, mock interviews and speaking competitions — online & offline in Indore.</p>
+        </div>
+      </div>
+
+      <div class="tab-row mb-3" id="al-filters">
+        <button class="tab active" data-f="All">All</button>
+        <button class="tab" data-f="Online">Online</button>
+        <button class="tab" data-f="Offline">Offline · Indore</button>
+      </div>
+
+      <div class="grid gauto-lg" id="al-grid"></div>
+
+      <div class="card card-cta mt-4 center card-pad-lg">
+        <h3>Want to host an ACT-LAB event?</h3>
+        <p class="muted text-sm" style="max-width:480px;margin:8px auto 16px">Propose a session, get mentor approval, and earn the "Speaking Star" badge when 3 of your events run.</p>
+        <button class="btn btn-primary" id="al-host">Propose an event</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  const registered = new Set();
+
+  function render(filter) {
+    const list = DB.events.filter(function (ev) { return filter === "All" || (filter === "Offline" ? ev.mode.indexOf("Offline") === 0 : ev.mode === "Online"); });
+    document.getElementById("al-grid").innerHTML = list.map(function (ev) {
+      const isReg = registered.has(ev.id);
+      const isOffline = ev.mode.indexOf("Offline") === 0;
+      const [d, m] = ev.date.split(" ");
+      return (
+        '<div class="card card-hover">' +
+          '<div class="event-card">' +
+            '<div class="event-date"><b>' + d + "</b><span>" + m + "</span></div>" +
+            '<div class="grow">' +
+              '<div class="flex" style="gap:8px;flex-wrap:wrap">' +
+                '<span class="badge ' + (isOffline ? "badge-amber" : "badge-cyan") + '">' + (isOffline ? "📍 " : "🌐 ") + window.esc(ev.mode) + "</span>" +
+                '<span class="badge badge-dim">' + window.esc(ev.type) + "</span>" +
+              "</div>" +
+              "<h3 class='mt-2' style='font-size:1.02rem'>" + window.esc(ev.title) + "</h3>" +
+              '<p class="text-sm muted" style="min-height:3.4em">' + window.esc(ev.desc) + "</p>" +
+              '<div class="text-xs muted">' + window.VT.icon("clock", 13) + " " + window.esc(ev.time) + " · Host: <b class='text-accent'>" + window.esc(ev.host) + "</b> · " + ev.seats + " seats</div>" +
+              '<button class="btn mt-2 ' + (isReg ? "btn-green" : "btn-primary") + ' btn-sm" data-reg="' + ev.id + '">' + (isReg ? "✓ Registered" : "Register") + "</button>" +
+            "</div>" +
+          "</div>" +
+        "</div>"
+      );
+    }).join("") || '<div class="empty-state" style="grid-column:1/-1"><div class="e-icon">🎤</div><b>No events in this filter</b></div>';
+  }
+
+  document.querySelectorAll("#al-filters .tab").forEach(function (t) {
+    t.addEventListener("click", function () {
+      document.querySelectorAll("#al-filters .tab").forEach(function (x) { x.classList.remove("active"); });
+      t.classList.add("active");
+      render(t.getAttribute("data-f"));
+    });
+  });
+
+  document.addEventListener("click", function (e) {
+    const reg = e.target.closest("[data-reg]");
+    if (reg) {
+      const id = Number(reg.getAttribute("data-reg"));
+      const ev = DB.events.find(function (x) { return x.id === id; });
+      if (registered.has(id)) {
+        registered.delete(id);
+        window.VT.toast("Registration cancelled for “" + ev.title + "”", "info");
+      } else {
+        registered.add(id);
+        window.VT.toast("You're in! See you at “" + ev.title + "” 🎉", "success", "Registered");
+      }
+      render(document.querySelector("#al-filters .tab.active").getAttribute("data-f"));
+    }
+  });
+
+  document.getElementById("al-host").addEventListener("click", function () {
+    window.VT.toast("Event proposals open every Monday — watch the feed!", "info", "ACT-LAB");
+  });
+
+  render("All");
+})();
+</script>
+</body>
+</html>

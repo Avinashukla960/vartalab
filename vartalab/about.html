@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>About — VARTALAB</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%236d5cff'/><text x='50' y='72' font-size='62' font-weight='bold' font-family='Arial' fill='white' text-anchor='middle'>V</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: { base:'#0b0f1a', card:'#151b2b', accent:'#6d5cff', cyan2:'#22d3ee' } } } };
+</script>
+<link rel="stylesheet" href="css/style.css">
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</head>
+<body>
+<main>
+  <section class="section" style="padding-top:50px">
+    <div class="wrap" style="max-width:860px">
+      <div class="center mb-4">
+        <span class="badge badge-cyan">VARTALAB — वार्तालाप, the art of conversation</span>
+        <h2 class="mt-2">About VARTALAB</h2>
+        <p class="muted" style="max-width:620px;margin:10px auto 0">
+          "Varta" means conversation. VARTALAB is a student-focused English practice platform built for India —
+          where classrooms teach rules but rarely give you a stage. We give you both.
+        </p>
+      </div>
+
+      <div class="grid g3">
+        <div class="card card-cta center">
+          <div style="font-size:2rem">📘</div>
+          <h3 class="mt-1">LEARN</h3>
+          <p class="muted text-sm">Grammar lessons, quizzes, videos and flashcards with instant feedback and XP. Master the rules first.</p>
+        </div>
+        <div class="card center">
+          <div style="font-size:2rem">🤝</div>
+          <h3 class="mt-1">CO-LAB</h3>
+          <p class="muted text-sm">Communities by goal and level — IELTS, interviews, boards, speaking. Ask doubts, share wins, practise together.</p>
+        </div>
+        <div class="card center">
+          <div style="font-size:2rem">🎤</div>
+          <h3 class="mt-1">ACT-LAB</h3>
+          <p class="muted text-sm">Debates, movie nights, poetry, mock interviews and competitions — real-time English, online and in Indore.</p>
+        </div>
+      </div>
+
+      <div class="grid g2 mt-4" style="grid-template-columns:1.2fr 1fr;align-items:start">
+        <div class="card">
+          <h3>🎯 Our mission</h3>
+          <p class="muted text-sm">
+            Every student deserves to speak English with confidence — not just pass grammar tests. We believe the best way to learn
+            is to <b class="text-accent">practise in public</b>: answer questions, speak in sessions, compete in contests, and get
+            feedback from peers. VARTALAB turns English practice into a daily habit with visible progress, ratings and streaks.
+          </p>
+          <ul class="muted text-sm mt-2" style="line-height:2">
+            <li>✅ Bite-sized lessons that respect your schedule</li>
+            <li>✅ Realistic mock tests & IELTS-style practice</li>
+            <li>✅ Weekly contests with ratings that actually move</li>
+            <li>✅ Communities and events that make practice social</li>
+            <li>✅ Free for students — no paywalls, ever</li>
+          </ul>
+        </div>
+
+        <div class="grid" style="gap:16px">
+          <div class="card">
+            <h3>⚙️ How this demo works</h3>
+            <p class="muted text-sm" style="margin-bottom:.4em">
+              This is a hackathon demo. Everything runs in your browser: no backend, no login, no real AI.
+              Your progress (rating, lessons, weak areas, contest results) is saved in <b>localStorage</b> as
+              "Demo Student — Aarav Sharma".
+            </p>
+            <p class="text-xs dim">Reset by clearing site data, or just keep practising!</p>
+          </div>
+          <div class="card">
+            <h3>🛡️ Terms & Privacy</h3>
+            <p class="muted text-sm" style="margin-bottom:.4em">
+              No personal data leaves your device in this demo. The full product would follow India's DPDP Act and keep
+              student data encrypted and consent-based. Practice content here is illustrative — not official IELTS material.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contact -->
+      <div class="card card-pad-lg mt-4" id="contact">
+        <h3>✉️ Contact us</h3>
+        <p class="muted text-sm">Questions, feedback or want to partner? Drop a message — we read everything (demo form, no backend).</p>
+        <div class="grid g2 mt-3" style="grid-template-columns:1fr 1fr;align-items:start">
+          <div class="field"><label>Name</label><input class="input" id="ct-name" placeholder="Your name"></div>
+          <div class="field"><label>Email</label><input class="input" id="ct-email" type="email" placeholder="you@example.com"></div>
+        </div>
+        <div class="field"><label>Message</label><textarea class="textarea" id="ct-msg" placeholder="Tell us anything…"></textarea></div>
+        <div class="flex-between" style="flex-wrap:wrap;gap:10px">
+          <div class="flex" style="gap:12px;flex-wrap:wrap">
+            <span class="badge badge-dim">📧 hello@vartalab.example</span>
+            <span class="badge badge-dim">📍 Indore, India</span>
+          </div>
+          <button class="btn btn-primary" id="ct-send">Send message ✈</button>
+        </div>
+        <div class="hidden mt-3" id="ct-ok" style="color:var(--teal);font-weight:700">✅ Thanks! This is a demo, so your message stays here — but we appreciate the intent!</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  document.getElementById("ct-send").addEventListener("click", function () {
+    const name = document.getElementById("ct-name").value.trim();
+    const email = document.getElementById("ct-email").value.trim();
+    const msg = document.getElementById("ct-msg").value.trim();
+    if (!name || !msg) { window.VT.toast("Please add your name and a message.", "error", "Contact form"); return; }
+    if (email && !/^\S+@\S+\.\S+$/.test(email)) { window.VT.toast("That email doesn't look right.", "error", "Contact form"); return; }
+    document.getElementById("ct-ok").classList.remove("hidden");
+    document.getElementById("ct-name").value = "";
+    document.getElementById("ct-email").value = "";
+    document.getElementById("ct-msg").value = "";
+    window.VT.toast("Message received — thank you, " + name + "!", "success", "Contact");
+    window.VT.confetti();
+  });
+})();
+</script>
+</body>
+</html>

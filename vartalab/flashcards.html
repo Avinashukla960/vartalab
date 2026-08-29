@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flashcards — VARTALAB</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%236d5cff'/><text x='50' y='72' font-size='62' font-weight='bold' font-family='Arial' fill='white' text-anchor='middle'>V</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: { base:'#0b0f1a', card:'#151b2b', accent:'#6d5cff', cyan2:'#22d3ee' } } } };
+</script>
+<link rel="stylesheet" href="css/style.css">
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</head>
+<body>
+<main>
+  <section class="section" style="padding-top:44px">
+    <div class="wrap" style="max-width:760px">
+      <div class="center mb-4">
+        <span class="eyebrow">Spaced recall</span>
+        <h2>🃏 Flashcards</h2>
+        <p class="muted" style="margin:6px 0 0">Tap the card to flip it. Say the answer out loud before you flip — that's the trick.</p>
+      </div>
+
+      <div class="flip-scene" id="fc-scene">
+        <div class="flip-inner">
+          <div class="flip-face">
+            <span class="flip-tag">Question</span>
+            <b id="fc-front"></b>
+            <p class="text-xs dim">Tap to flip →</p>
+          </div>
+          <div class="flip-face back">
+            <span class="flip-tag">Answer</span>
+            <b id="fc-back"></b>
+            <p id="fc-back-sub" class="text-sm"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex-between mt-4" style="max-width:520px;margin-left:auto;margin-right:auto">
+        <span class="text-sm muted" id="fc-count"></span>
+        <div class="flex" style="gap:8px">
+          <button class="btn btn-ghost btn-sm" id="fc-prev">← Prev</button>
+          <button class="btn btn-primary btn-sm" id="fc-flip">Flip</button>
+          <button class="btn btn-ghost btn-sm" id="fc-next">Next →</button>
+        </div>
+      </div>
+      <div class="center mt-4">
+        <button class="btn btn-ghost" id="fc-shuffle">🔀 Shuffle</button>
+      </div>
+      <div class="empty-state hidden mt-4" id="fc-empty">
+        <div class="e-icon">🃏</div><b>Deck complete!</b>
+        <p class="text-sm">You've gone through every card. Shuffle and go again — recall is the goal.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  const scene = document.getElementById("fc-scene");
+  const front = document.getElementById("fc-front");
+  const back = document.getElementById("fc-back");
+  const backSub = document.getElementById("fc-back-sub");
+  const countEl = document.getElementById("fc-count");
+  const u = DB.currentUser;
+
+  let deck = DB.flashcards.slice();
+  let idx = 0;
+
+  function flip(on) { scene.classList.toggle("flipped", on !== undefined ? on : !scene.classList.contains("flipped")); }
+
+  function render() {
+    if (!deck.length) {
+      document.getElementById("fc-empty").classList.remove("hidden");
+      scene.style.display = "none";
+      return;
+    }
+    scene.style.display = "";
+    const c = deck[idx];
+    front.textContent = c.front;
+    // split back into definition + example
+    const exIdx = c.back.indexOf("Example:");
+    if (exIdx > -1) {
+      back.textContent = c.back.slice(0, exIdx).trim();
+      backSub.textContent = "Example: " + c.back.slice(exIdx + 8).trim();
+    } else {
+      back.textContent = c.back;
+      backSub.textContent = "";
+    }
+    countEl.textContent = "Card " + (idx + 1) + " of " + deck.length;
+    flip(false);
+  }
+
+  document.getElementById("fc-flip").addEventListener("click", function () { flip(); });
+  scene.addEventListener("click", function () { flip(); });
+  document.getElementById("fc-next").addEventListener("click", function () {
+    idx = (idx + 1) % deck.length; render();
+    u.streak += 1; window.VT.saveState();
+  });
+  document.getElementById("fc-prev").addEventListener("click", function () {
+    idx = (idx - 1 + deck.length) % deck.length; render();
+  });
+  document.getElementById("fc-shuffle").addEventListener("click", function () {
+    deck = deck.sort(function () { return Math.random() - 0.5; });
+    idx = 0; render();
+    window.VT.toast("Deck shuffled — good luck!", "info");
+  });
+
+  /* keyboard: space = flip, arrows = navigate */
+  document.addEventListener("keydown", function (e) {
+    if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+    if (e.code === "Space") { e.preventDefault(); flip(); }
+    if (e.key === "ArrowRight") document.getElementById("fc-next").click();
+    if (e.key === "ArrowLeft") document.getElementById("fc-prev").click();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

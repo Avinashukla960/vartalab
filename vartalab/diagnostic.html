@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagnostic — VARTALAB</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%236d5cff'/><text x='50' y='72' font-size='62' font-weight='bold' font-family='Arial' fill='white' text-anchor='middle'>V</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: { base:'#0b0f1a', card:'#151b2b', accent:'#6d5cff', cyan2:'#22d3ee' } } } };
+</script>
+<link rel="stylesheet" href="css/style.css">
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</head>
+<body>
+<main>
+  <section class="section" style="padding-top:60px">
+    <div class="wrap" style="max-width:760px">
+      <div class="card card-pad-lg" id="diag-card">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  const card = document.getElementById("diag-card");
+  const u = DB.currentUser;
+
+  /* ---- step definitions ---- */
+  const steps = [
+    {
+      title: "What's your primary goal?",
+      sub: "We'll tailor your path, papers and communities around this.",
+      kind: "pick", options: DB.goals,
+      icons: { IELTS: "🎓", Interview: "💼", "Higher studies": "📚", General: "🌍", Speaking: "🗣️", Writing: "✍️" },
+    },
+    {
+      title: "What's your current level?",
+      sub: "Honest answer = better recommendations. You can always change it.",
+      kind: "pick", options: DB.levels,
+      icons: { A1: "🌱", A2: "🌿", B1: "🌳", "B1+": "🌳✨", B2: "🚀", C1: "👑" },
+    },
+    { title: "Question 1 · She ____ to school every day.", kind: "quiz", options: ["go", "goes", "going", "gone"], correct: 1, skill: "Tense", why: "'goes' — third person singular (she) needs -es in the present simple." },
+    { title: "Question 2 · I ____ breakfast at 8 AM yesterday.", kind: "quiz", options: ["have", "had", "has", "am having"], correct: 1, skill: "Tense", why: "'had' — a completed action in the past (yesterday) uses the past simple." },
+    { title: "Question 3 · She is ____ engineer at Infosys.", kind: "quiz", options: ["a", "an", "the", "no article"], correct: 1, skill: "Articles", why: "'an engineer' — 'engineer' begins with a vowel sound, so we use 'an'." },
+  ];
+
+  const answers = [];
+  let step = 0;
+  let goal = u.goal || "IELTS";
+  let level = u.selfLevel || "B1+";
+
+  function render() {
+    card.innerHTML = "";
+    // progress dots
+    const dots = steps.map(function (_, i) {
+      const cls = i < step ? "done" : i === step ? "cur" : "";
+      return '<span class="dot-step ' + cls + '"></span>';
+    }).join("");
+    const progress = Math.round(((step) / steps.length) * 100);
+    const progressBar =
+      '<div class="flex-between mb-2"><span class="eyebrow">Diagnostic · ' + (step + 1) + " of " + steps.length + "</span>" +
+      '<span class="text-sm bold text-accent">' + progress + "%</span></div>" +
+      '<div class="progress mb-3"><div class="progress-fill" style="width:' + progress + '%"></div></div>';
+
+    const s = steps[step];
+    let body = "";
+    if (s.kind === "pick") {
+      body =
+        '<h2 class="mt-2">' + s.title + "</h2>" +
+        '<p class="muted mb-3">' + s.sub + "</p>" +
+        '<div class="mt-3">' +
+        s.options.map(function (o) {
+          const selected = step === 0 ? goal === o : level === o;
+          return (
+            '<button class="option-card" data-val="' + window.esc(o) + '">' +
+              '<span class="opt-icon">' + (s.icons[o] || "•") + "</span>" + window.esc(o) +
+              (selected ? '<span class="option-check" style="margin-left:auto;color:var(--teal)">✓</span>' : "") +
+            "</button>"
+          );
+        }).join("") + "</div>";
+    } else {
+      body =
+        '<h2 class="mt-2">' + s.title + "</h2>" +
+        '<div class="mt-3">' +
+        s.options.map(function (o, i) {
+          return '<button class="quiz-option" data-i="' + i + '"><span class="opt-letter">' + String.fromCharCode(65 + i) + "</span>" + window.esc(o) + "</button>";
+        }).join("") + "</div>";
+    }
+
+    const navBtns =
+      '<div class="flex-between mt-4" style="border-top:1px solid var(--border);padding-top:18px">' +
+        (step > 0 ? '<button class="btn btn-ghost" id="d-back">← Back</button>' : '<span></span>') +
+        '<button class="btn btn-primary" id="d-next" ' + (step === 0 || step === 1 ? "" : "disabled") + ">" + (step === steps.length - 1 ? "See my result" : "Continue →") + "</button>" +
+      "</div>";
+
+    card.innerHTML = progressBar + body + navBtns;
+
+    card.querySelectorAll(".option-card").forEach(function (b) {
+      b.addEventListener("click", function () {
+        card.querySelectorAll(".option-card").forEach(function (x) { x.classList.remove("selected"); });
+        b.classList.add("selected");
+        const val = b.getAttribute("data-val");
+        if (step === 0) goal = val; else level = val;
+        document.getElementById("d-next").disabled = false;
+      });
+    });
+    card.querySelectorAll(".quiz-option").forEach(function (b) {
+      b.addEventListener("click", function () {
+        const i = Number(b.getAttribute("data-i"));
+        const correct = s.correct === i;
+        answers.push({ skill: s.skill, correct: correct });
+        // instant feedback
+        card.querySelectorAll(".quiz-option").forEach(function (x, xi) {
+          x.disabled = true;
+          x.classList.add("locked");
+          if (xi === s.correct) x.classList.add("correct");
+          if (xi === i && !correct) x.classList.add("wrong");
+        });
+        const box = document.createElement("div");
+        box.className = "explain-box" + (correct ? "" : " wrong-x");
+        box.innerHTML = (correct ? "✅ " : "❌ ") + s.why;
+        b.closest("div").appendChild(box);
+        document.getElementById("d-next").disabled = false;
+      });
+    });
+
+    document.getElementById("d-next").addEventListener("click", next);
+    const back = document.getElementById("d-back");
+    if (back) back.addEventListener("click", function () { if (step > 0) { step--; answers.length = step <= 1 ? 0 : answers.length; render(); } });
+  }
+
+  function next() {
+    if (step < steps.length - 1) { step++; render(); }
+    else showResult();
+  }
+
+  function showResult() {
+    // compute a level guess from the 3 grammar answers
+    const correctCount = answers.filter(function (a) { return a.correct; }).length;
+    const levelMap = ["A1", "A2", "B1", "B1+"];
+    const suggestedLevel = levelMap[Math.min(3, correctCount)];
+    const levelUsed = level !== "B1+" ? level : suggestedLevel;
+
+    // weak areas from wrong answers
+    const wrongSkills = answers.filter(function (a) { return !a.correct; }).map(function (a) { return a.skill; });
+    const focus = wrongSkills.length ? wrongSkills.join(" & ") : "Tenses";
+    const focusList = wrongSkills.length ? wrongSkills : ["Tense"];
+
+    // persist to localStorage
+    u.goal = goal;
+    u.selfLevel = levelUsed;
+    u.diagnostic = { date: new Date().toISOString(), goal: goal, level: levelUsed, correct: correctCount, total: 3, focus: focusList };
+    if (focusList.length) u.weakAreas = Array.from(new Set((u.weakAreas || []).concat(focusList)));
+    window.VT.saveState();
+
+    const confetti = correctCount >= 2;
+    card.innerHTML =
+      '<div class="center">' +
+        '<div style="font-size:3rem">' + (confetti ? "🎉" : "💪") + "</div>" +
+        '<span class="eyebrow">Diagnostic complete</span>' +
+        '<h2 class="mt-2">Recommended path: Level <span class="grad-text" style="background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent">' + levelUsed + "</span></h2>" +
+        '<p class="muted" style="max-width:460px;margin:12px auto 0">Focus on <b class="text-accent">' + focus + "</b> to level up fastest. Here's your starter plan:</p>" +
+        '<div class="grid g3 mt-3" style="text-align:left;max-width:640px;margin-left:auto;margin-right:auto">' +
+          '<div class="card card-flat"><span style="font-size:1.6rem">📘</span><b class="text-sm d-block mt-1">Lessons</b><p class="text-xs muted" style="margin:4px 0 0">' + (focus === "Tenses" ? "Present Perfect Tense" : "Articles: A, An & The") + " is your first recommended lesson.</p></div>" +
+          '<div class="card card-flat"><span style="font-size:1.6rem">⏱️</span><b class="text-sm d-block mt-1">Mock test</b><p class="text-xs muted" style="margin:4px 0 0">' + (focus === "Tenses" ? "Tense Mastery" : "Articles & Prepositions") + " — timed, 10 questions.</p></div>" +
+          '<div class="card card-flat"><span style="font-size:1.6rem">🎬</span><b class="text-sm d-block mt-1">Video</b><p class="text-xs muted" style="margin:4px 0 0">A curated video lesson to lock in the rule.</p></div>' +
+        "</div>" +
+        '<div class="flex mt-4" style="justify-content:center;gap:12px;flex-wrap:wrap">' +
+          '<a class="btn btn-primary btn-lg" href="learn.html">Start Learning →</a>' +
+          '<a class="btn btn-ghost btn-lg" href="diagnostic.html">Retake</a>' +
+        "</div>" +
+      "</div>";
+
+    window.VT.toast("Goal: " + goal + " · Level: " + levelUsed, "success", "Diagnostic saved");
+    if (confetti) window.VT.confetti();
+    else window.VT.toast("Review the recommended lessons to strengthen weak areas.", "info");
+  }
+
+  render();
+
+  // small style helper
+  const st = document.createElement("style");
+  st.textContent = ".dot-step{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.14);display:inline-block;margin-right:6px}.dot-step.cur{background:#fafafa;box-shadow:0 0 0 4px rgba(255,255,255,.15)}.dot-step.done{background:#4ade80}";
+  document.head.appendChild(st);
+})();
+</script>
+</body>
+</html>

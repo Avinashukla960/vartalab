@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign in — VARTALAB</title>
+<meta name="description" content="Sign in to VARTALAB. Demo credentials: demo@vartalab.com / demo1234.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23fafafa'/><text x='50' y='72' font-size='62' font-weight='bold' font-family='Arial' fill='%2309090b' text-anchor='middle'>V</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: { base:'#09090b', card:'#101013', accent:'#fafafa' } } } };
+</script>
+<link rel="stylesheet" href="css/style.css">
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</head>
+<body>
+<main>
+  <div class="login-wrap">
+    <div class="login-card">
+      <!-- Brand -->
+      <div class="center mb-3">
+        <a class="brand" href="index.html" style="justify-content:center">
+          <span class="brand-mark">V</span><span style="font-size:1.2rem">VARTA<small style="color:#a1a1aa;font-weight:700">LAB</small></span>
+        </a>
+      </div>
+
+      <div class="card card-pad-lg" style="border-radius:14px">
+        <div class="center mb-3">
+          <h2 style="margin-bottom:.1em">Welcome back</h2>
+          <p class="muted text-sm" style="margin:0">Sign in to your dashboard and continue practising.</p>
+        </div>
+
+        <!-- Demo credentials hint -->
+        <div class="cred-box mb-3" id="cred-hint">
+          <div class="flex-between mb-1">
+            <span class="text-xs uppercase" style="letter-spacing:.08em;color:#71717a;font-weight:600">Demo credentials</span>
+            <button class="btn btn-ghost btn-sm" id="btn-fill" type="button" style="padding:2px 10px">Autofill</button>
+          </div>
+          <div class="cred-row"><span style="color:#a1a1aa">Email</span><code id="cred-email">demo@vartalab.com</code></div>
+          <div class="cred-row"><span style="color:#a1a1aa">Password</span><code id="cred-pass">demo1234</code></div>
+        </div>
+
+        <form id="login-form" novalidate>
+          <div class="field">
+            <label for="email">Email</label>
+            <input class="input" id="email" type="email" name="email" placeholder="you@example.com" autocomplete="username" value="demo@vartalab.com">
+          </div>
+          <div class="field">
+            <label for="password">Password</label>
+            <div style="position:relative">
+              <input class="input" id="password" type="password" name="password" placeholder="••••••••" autocomplete="current-password" value="demo1234" style="padding-right:42px">
+              <button type="button" id="toggle-pass" aria-label="Show password" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:#71717a;padding:4px;display:inline-flex">
+                <svg id="eye-icon" xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="flex-between mb-3" style="gap:8px">
+            <label class="flex" style="gap:7px;font-size:.82rem;color:#a1a1aa;cursor:pointer">
+              <input type="checkbox" id="remember" checked style="accent-color:#fafafa"> Remember me
+            </label>
+            <a href="#" class="text-sm" style="color:#a1a1aa" onclick="return false">Forgot password?</a>
+          </div>
+
+          <div id="login-error" class="hidden" style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3);color:#f87171;border-radius:8px;padding:9px 12px;font-size:.84rem;margin-bottom:12px">
+            Invalid email or password. Try the demo credentials above.
+          </div>
+
+          <button class="btn btn-primary btn-block btn-lg" id="btn-login" type="submit" style="border-radius:9px">Sign in →</button>
+        </form>
+
+        <p class="center text-xs mt-3" style="color:#71717a;margin-bottom:0">
+          Demo student: <b style="color:#d4d4d8">Aarav Sharma</b> · your progress is saved in this browser
+        </p>
+      </div>
+
+      <div class="center mt-3">
+        <span class="text-xs" style="color:#71717a">New to VARTALAB?</span>
+        <a href="index.html" class="text-sm" style="margin-left:6px">Learn what we do →</a>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  var form = document.getElementById("login-form");
+  var email = document.getElementById("email");
+  var password = document.getElementById("password");
+  var errorBox = document.getElementById("login-error");
+  var btn = document.getElementById("btn-login");
+  var next = new URLSearchParams(location.search).get("next") || "learn.html";
+  // only allow internal pages
+  if (!/^[\w-]+\.html$/.test(next)) next = "learn.html";
+
+  /* autofill demo credentials */
+  document.getElementById("btn-fill").addEventListener("click", function () {
+    email.value = window.VT.DEMO_EMAIL;
+    password.value = window.VT.DEMO_PASSWORD;
+    window.VT.toast("Demo credentials filled — hit Sign in", "info", "Autofill");
+  });
+
+  /* show/hide password */
+  document.getElementById("toggle-pass").addEventListener("click", function () {
+    var isPass = password.type === "password";
+    password.type = isPass ? "text" : "password";
+    document.getElementById("eye-icon").innerHTML = isPass
+      ? '<path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/>'
+      : '<path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/>';
+  });
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    errorBox.classList.add("hidden");
+    var ok = window.VT.login(email.value, password.value);
+    if (!ok) {
+      errorBox.classList.remove("hidden");
+      errorBox.style.animation = "shake .4s ease";
+      setTimeout(function () { errorBox.style.animation = ""; }, 450);
+      return;
+    }
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner" style="width:16px;height:16px;border-width:2px"></span> Signing in…';
+    setTimeout(function () { location.href = next; }, 550);
+  });
+})();
+</script>
+</body>
+</html>

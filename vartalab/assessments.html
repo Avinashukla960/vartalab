@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Assessments — VARTALAB</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%236d5cff'/><text x='50' y='72' font-size='62' font-weight='bold' font-family='Arial' fill='white' text-anchor='middle'>V</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: { base:'#0b0f1a', card:'#151b2b', accent:'#6d5cff', cyan2:'#22d3ee' } } } };
+</script>
+<link rel="stylesheet" href="css/style.css">
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</head>
+<body>
+<main>
+  <section class="section" style="padding-top:44px">
+    <div class="wrap" style="max-width:900px">
+      <div class="flex-between mb-4">
+        <div>
+          <span class="eyebrow">Mock tests</span>
+          <h2>⏱️ Assessments</h2>
+          <p class="muted" style="margin:6px 0 0">Timed, exam-style tests. No instant feedback — just like the real thing.</p>
+        </div>
+        <a class="btn btn-ghost btn-sm" href="learn.html">← Back to Learn</a>
+      </div>
+      <div id="as-root"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  const root = document.getElementById("as-root");
+  const u = DB.currentUser;
+  const params = new URLSearchParams(location.search);
+  const paperId = params.get("paper");
+  const autoStart = params.get("start");
+
+  let current = null;        // assessment object
+  let answers = [];          // chosen option indexes
+  let qIndex = 0;
+  let timerId = null;
+  let secondsTotal = 0;
+
+  const SECONDS_MAP = { "10 min": 600, "15 min": 900, "25 min": 1500, "30 min": 1800, "20 min": 1200, "45 min": 2700, "50 min": 3000, "60 min": 3600, "90 min": 5400 };
+
+  function timeToSeconds(t) { return SECONDS_MAP[t] || 600; }
+
+  /* ---------- List ---------- */
+  function renderList() {
+    root.innerHTML =
+      '<div class="grid gauto" id="as-list">' +
+      DB.assessments.map(function (a) {
+        const prev = a.attempted;
+        return (
+          '<div class="card card-hover">' +
+            '<div class="flex-between">' + window.skillBadge(a.skill) +
+            (prev ? '<span class="badge badge-green">✓ ' + prev + "%</span>" : '<span class="badge badge-dim">New</span>') + "</div>" +
+            "<h3 class='mt-2' style='font-size:1rem'>" + window.esc(a.title) + "</h3>" +
+            '<div class="flex text-sm muted" style="gap:14px;flex-wrap:wrap">' +
+              '<span>📝 ' + a.questions + " questions</span>" +
+              '<span>⏱ ' + a.time + "</span>" +
+              '<span>🎯 Pass ≥ ' + a.pass + "%</span>" +
+            "</div>" +
+            '<button class="btn btn-primary btn-sm mt-3" data-start="' + a.id + '">' + (prev ? "Retake" : "Start test") + " →</button>" +
+          "</div>"
+        );
+      }).join("") +
+      "</div>";
+    root.querySelectorAll("[data-start]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        current = DB.assessments.find(function (a) { return a.id === Number(b.getAttribute("data-start")); });
+        begin();
+      });
+    });
+  }
+
+  /* ---------- Intro screen (rules + start) ---------- */
+  function renderIntro() {
+    const secs = timeToSeconds(current.time);
+    root.innerHTML =
+      '<div class="card card-pad-lg">' +
+        '<div class="flex" style="gap:10px;flex-wrap:wrap">' + window.skillBadge(current.skill) +
+          '<span class="badge badge-amber">Pass ≥ ' + current.pass + "%</span></div>" +
+        "<h2 class='mt-2'>" + window.esc(current.title) + "</h2>" +
+        '<div class="grid g3 mt-3" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">' +
+          '<div class="card card-flat center"><b style="font-size:1.2rem">' + current.questions + "</b><span class='text-xs dim'>Questions</span></div>" +
+          '<div class="card card-flat center"><b style="font-size:1.2rem">' + current.time + "</b><span class='text-xs dim'>Duration</span></div>" +
+          '<div class="card card-flat center"><b style="font-size:1.2rem">' + current.pass + "%</b><span class='text-xs dim'>Pass mark</span></div>" +
+        "</div>" +
+        '<div class="card card-flat mt-3 text-sm muted"><b class="text-accent">How it works</b><ul style="margin:8px 0 0">' +
+          "<li>Questions appear one at a time — no instant feedback.</li>" +
+          "<li>The timer counts down; the test submits automatically at 0:00.</li>" +
+          "<li>You can jump between questions with the navigator.</li>" +
+          "<li>Your weak topics feed your recommended lessons afterwards.</li>" +
+        "</ul></div>" +
+        '<div class="flex mt-4" style="gap:12px">' +
+          '<button class="btn btn-primary btn-lg grow" id="as-go">Start — ' + current.time + " ⏱</button>" +
+          '<button class="btn btn-ghost btn-lg" id="as-back">Cancel</button>' +
+        "</div>" +
+      "</div>";
+    document.getElementById("as-go").addEventListener("click", function () { renderQuestion(); });
+    document.getElementById("as-back").addEventListener("click", renderList);
+    secondsTotal = secs;
+  }
+
+  /* ---------- Question screen (timer runs) ---------- */
+  function renderQuestion() {
+    if (!timerId) {
+      timerId = window.startClock("as-clock", secondsTotal, submit);
+    }
+    const q = current.qs[qIndex];
+    const chosen = answers[qIndex];
+    root.innerHTML =
+      '<div class="card card-pad-lg">' +
+        '<div class="flex-between mb-2">' +
+          '<span class="eyebrow">Question ' + (qIndex + 1) + " of " + current.qs.length + "</span>" +
+          '<span class="badge badge-red" style="font-size:.9rem">⏱ <b id="as-clock">--:--</b></span>' +
+        "</div>" +
+        '<div class="progress mb-3"><div class="progress-fill" style="width:' + ((qIndex + 1) / current.qs.length) * 100 + '%"></div></div>' +
+        '<h3 style="font-size:1.2rem;min-height:2.2em">' + window.esc(q.q) + "</h3>" +
+        '<div class="mt-3">' +
+          q.options.map(function (o, i) {
+            return '<button class="quiz-option" data-i="' + i + '"' + (chosen === i ? ' style="border-color:var(--accent);background:var(--accent-dim)"' : "") + '>' +
+              '<span class="opt-letter">' + String.fromCharCode(65 + i) + "</span>" + window.esc(o) +
+              (chosen === i ? '<span class="option-check">✓</span>' : "") + "</button>";
+          }).join("") +
+        "</div>" +
+        '<div class="flex-between mt-4" style="border-top:1px solid var(--border);padding-top:16px">' +
+          '<button class="btn btn-ghost" id="as-prev"' + (qIndex === 0 ? " disabled" : "") + ">← Prev</button>" +
+          '<div class="flex" style="gap:6px">' + current.qs.map(function (_, i) {
+            const cls = answers[i] !== undefined ? "done" : i === qIndex ? "cur" : "";
+            return '<button class="q-nav ' + cls + '" data-j="' + i + '">' + (i + 1) + "</button>";
+          }).join("") + "</div>" +
+          (qIndex === current.qs.length - 1
+            ? '<button class="btn btn-green" id="as-submit">Submit ✓</button>'
+            : '<button class="btn btn-primary" id="as-next">Next →</button>') +
+        "</div>" +
+      "</div>";
+
+    root.querySelectorAll(".quiz-option").forEach(function (b) {
+      b.addEventListener("click", function () {
+        const i = Number(b.getAttribute("data-i"));
+        answers[qIndex] = i;
+        renderQuestion(); // re-render to show selection + navigator state
+      });
+    });
+    const prevBtn = root.querySelector("#as-prev");
+    if (prevBtn) prevBtn.addEventListener("click", function () { qIndex--; renderQuestion(); });
+    const nextBtn = root.querySelector("#as-next");
+    if (nextBtn) nextBtn.addEventListener("click", function () { qIndex++; renderQuestion(); });
+    const subBtn = root.querySelector("#as-submit");
+    if (subBtn) subBtn.addEventListener("click", submit);
+    root.querySelectorAll(".q-nav").forEach(function (b) {
+      b.addEventListener("click", function () { qIndex = Number(b.getAttribute("data-j")); renderQuestion(); });
+    });
+  }
+
+  /* ---------- Submit ---------- */
+  function submit() {
+    if (timerId) { clearInterval(timerId); timerId = null; }
+    let correct = 0;
+    const wrongSkills = {};
+    current.qs.forEach(function (q, i) {
+      if (answers[i] === q.correct) correct++;
+      else wrongSkills[q.skill] = (wrongSkills[q.skill] || 0) + 1;
+    });
+    const total = current.qs.length;
+    const pct = Math.round((correct / total) * 100);
+    const passed = pct >= current.pass;
+
+    // persist
+    current.attempted = pct;
+    const ratingGain = passed ? 10 : 2;
+    const old = u.rating;
+    u.rating = Math.min(2000, u.rating + ratingGain);
+    u.highestRating = Math.max(u.highestRating, u.rating);
+    u.streak += 1;
+    const weakKeys = Object.keys(wrongSkills);
+    if (weakKeys.length) u.weakAreas = Array.from(new Set((u.weakAreas || []).concat(weakKeys)));
+    u.lastAssessment = { id: current.id, title: current.title, pct: pct, correct: correct, total: total, date: new Date().toISOString() };
+    window.VT.saveState();
+
+    const skillLink = weakKeys.length ? weakKeys[0] : current.skill;
+    const recLesson = DB.lessons.find(function (l) { return l.skill === skillLink; });
+
+    root.innerHTML =
+      '<div class="card card-pad-lg center">' +
+        '<div style="font-size:3.2rem">' + (passed ? "🎉" : "📈") + "</div>" +
+        '<span class="eyebrow">Assessment result</span>' +
+        '<h2 class="mt-1">' + (passed ? "You passed!" : "So close — review & retry") + "</h2>" +
+        '<div class="mt-2" id="as-ring"></div>' +
+        '<p class="muted mt-2">' + correct + " of " + total + " correct · <b style='color:var(--accent-3)'>" + pct + "%</b> · Pass mark " + current.pass + "%</p>" +
+        '<div class="grid g3 mt-2" style="max-width:520px;margin:0 auto;text-align:left">' +
+          '<div class="card card-flat center"><b style="color:var(--cyan)">+' + ratingGain + "</b><span class='text-xs dim'>Rating (" + old + "→" + u.rating + ")</span></div>" +
+          '<div class="card card-flat center"><b style="color:var(--teal)">' + (Object.keys(wrongSkills).length ? Object.keys(wrongSkills).join(", ") : "—") + "</b><span class='text-xs dim'>Weak topics</span></div>" +
+          '<div class="card card-flat center"><b style="color:var(--amber)">' + u.streak + "</b><span class='text-xs dim'>Day streak</span></div>" +
+        "</div>" +
+        (weakKeys.length
+          ? '<div class="card card-flat mt-3" style="text-align:left"><b class="text-sm">🎯 Recommended to fix <span class="text-accent">' + window.esc(weakKeys.join(", ")) + "</span>:</b>" +
+            '<div class="flex mt-2" style="gap:10px;flex-wrap:wrap">' +
+              (recLesson ? '<a class="btn btn-primary btn-sm" href="lesson.html?id=' + recLesson.id + '">📘 ' + window.esc(recLesson.title) + "</a>" : "") +
+              '<a class="btn btn-ghost btn-sm" href="videos.html">🎬 Watch videos</a>' +
+              '<a class="btn btn-ghost btn-sm" href="flashcards.html">🃏 Flashcards</a>' +
+            "</div></div>"
+          : "") +
+        '<div class="flex mt-4" style="justify-content:center;gap:12px;flex-wrap:wrap">' +
+          '<button class="btn btn-primary btn-lg" id="as-retry">↻ Retry test</button>' +
+          '<a class="btn btn-ghost btn-lg" href="learn.html">Go to Learn</a>' +
+          '<a class="btn btn-ghost btn-lg" href="leaderboard.html">Leaderboard</a>' +
+        "</div>" +
+      "</div>";
+
+    document.getElementById("as-ring").innerHTML = window.progressRing(pct, 150, pct + "%", "Score");
+    window.animateRings();
+    document.getElementById("as-retry").addEventListener("click", function () {
+      answers = []; qIndex = 0; timerId = null; renderIntro();
+    });
+    window.VT.toast(pct + "% · Rating +" + ratingGain, passed ? "success" : "info", passed ? "Test passed!" : "Test submitted");
+    if (passed) window.VT.confetti();
+  }
+
+  function begin() {
+    answers = [];
+    qIndex = 0;
+    timerId = null;
+    renderIntro();
+  }
+
+  /* auto-start from papers page */
+  if (paperId) {
+    const p = DB.papers.find(function (x) { return x.id === Number(paperId); });
+    if (p) {
+      current = p.exam === "Interview" ? DB.assessments[2] : p.exam === "Board" ? DB.assessments[1] : p.type === "Writing" ? DB.assessments[0] : DB.assessments[1];
+      begin();
+    } else renderList();
+  } else if (autoStart) {
+    current = DB.assessments.find(function (a) { return a.id === Number(autoStart); }) || DB.assessments[0];
+    begin();
+  } else {
+    renderList();
+  }
+})();
+</script>
+<style>
+  .q-nav {
+    width: 30px; height: 30px; border-radius: 8px; font-size: .78rem; font-weight: 600;
+    border: 1px solid var(--border-strong); background: rgba(255,255,255,.04); color: #a1a1aa;
+  }
+  .q-nav.cur { background: #fafafa; border-color: #fafafa; color: #09090b; }
+  .q-nav.done { background: rgba(74,222,128,.12); border-color: rgba(74,222,128,.4); color: #4ade80; }
+  .q-nav:hover { border-color: rgba(255,255,255,.4); }
+</style>
+</body>
+</html>

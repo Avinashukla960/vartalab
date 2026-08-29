@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Profile — VARTALAB</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%236d5cff'/><text x='50' y='72' font-size='62' font-weight='bold' font-family='Arial' fill='white' text-anchor='middle'>V</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: { base:'#0b0f1a', card:'#151b2b', accent:'#6d5cff', cyan2:'#22d3ee' } } } };
+</script>
+<link rel="stylesheet" href="css/style.css">
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</head>
+<body>
+<main>
+  <section class="section" style="padding-top:44px">
+    <div class="wrap" style="max-width:980px">
+      <div class="grid g2" style="grid-template-columns:340px 1fr;align-items:start" id="profile-grid">
+        <!-- LEFT: identity card -->
+        <div class="card center">
+          <span class="avatar avatar-xl">😀</span>
+          <h2 class="mt-2" style="margin-bottom:.1em">Aarav Sharma</h2>
+          <div class="flex" style="justify-content:center;gap:8px;flex-wrap:wrap">
+            <span class="badge badge-accent">🎯 IELTS</span>
+            <span class="badge badge-cyan">Level B1+</span>
+            <span class="badge badge-green">Top 82%</span>
+          </div>
+          <hr class="divider">
+          <div class="grid g2" style="gap:12px">
+            <div class="card card-flat center" style="padding:14px"><b style="font-size:1.3rem;color:var(--cyan)">1620</b><div class="text-xs dim">Rating</div></div>
+            <div class="card card-flat center" style="padding:14px"><b style="font-size:1.3rem;color:var(--amber)">1642</b><div class="text-xs dim">Highest</div></div>
+            <div class="card card-flat center" style="padding:14px"><b style="font-size:1.3rem;color:var(--teal)">#231</b><div class="text-xs dim">Global rank</div></div>
+            <div class="card card-flat center" style="padding:14px"><b style="font-size:1.3rem;color:var(--pink)">14🔥</b><div class="text-xs dim">Streak</div></div>
+          </div>
+          <div class="mt-3 grid" style="gap:10px">
+            <button class="btn btn-primary" id="pf-share">🔗 Share profile</button>
+            <button class="btn btn-ghost" id="pf-privacy">🌐 Profile: Public</button>
+            <a class="btn btn-ghost" href="learn.html">📘 Continue learning</a>
+            <button class="btn btn-danger" id="pf-logout">⏻ Log out</button>
+          </div>
+        </div>
+
+        <!-- RIGHT: details -->
+        <div class="grid" style="gap:20px">
+          <!-- badges -->
+          <div class="card">
+            <div class="flex-between">
+              <h3>🏅 Achievements</h3>
+              <span class="text-xs dim" id="pf-badge-count"></span>
+            </div>
+            <div class="badge-grid mt-2" id="pf-badges"></div>
+          </div>
+
+          <!-- skills -->
+          <div class="card">
+            <h3>📊 Skill breakdown</h3>
+            <div class="mt-2 grid" style="gap:14px" id="pf-skills"></div>
+          </div>
+
+          <!-- contest history -->
+          <div class="card">
+            <div class="flex-between"><h3>⚔️ Contest history</h3><a class="btn btn-ghost btn-sm" href="arena.html">Arena →</a></div>
+            <div class="mt-2" id="pf-contests"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  const u = DB.currentUser;
+  const grid = document.getElementById("profile-grid");
+
+  /* badges */
+  const earned = u.badges.filter(function (b) { return b.earned; });
+  document.getElementById("pf-badge-count").textContent = earned.length + " of " + u.badges.length + " earned";
+  document.getElementById("pf-badges").innerHTML = u.badges.map(function (b) {
+    return (
+      '<div class="badge-tile' + (b.earned ? "" : " locked") + '">' +
+        (b.earned ? "" : '<span class="lock">' + window.VT.icon("lock", 14) + "</span>") +
+        '<div class="b-ico">' + (b.earned ? b.icon : "🔒") + "</div>" +
+        "<b>" + window.esc(b.name) + "</b><span>" + window.esc(b.desc) + "</span>" +
+      "</div>"
+    );
+  }).join("");
+
+  /* skills */
+  document.getElementById("pf-skills").innerHTML = Object.keys(u.skills).map(function (k) {
+    const v = u.skills[k];
+    const barCls = v < 50 ? "pink" : v < 75 ? "amber" : "teal";
+    return (
+      '<div class="skill-row">' +
+        '<b class="text-sm">' + k + "</b>" +
+        '<div class="progress"><div class="progress-fill ' + barCls + '" style="width:' + v + '%"></div></div>' +
+        '<span class="pct">' + v + "%</span>" +
+      "</div>"
+    );
+  }).join("");
+
+  /* contests */
+  const items = DB.pastContests.slice().reverse();
+  const last = u.contestAttempt;
+  if (last) {
+    items.unshift({
+      title: last.title + " (latest)", date: new Date(last.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }),
+      score: last.score, total: last.total, rank: last.rank, entries: 342, ratingGain: last.ratingGain,
+    });
+  }
+  document.getElementById("pf-contests").innerHTML = items.map(function (p) {
+    const pct = Math.round((p.score / p.total) * 100);
+    return (
+      '<div class="list-row">' +
+        '<span class="icon-badge">' + window.VT.icon("trophy", 18) + "</span>" +
+        '<div class="l-body"><b class="text-sm">' + window.esc(p.title) + "</b>" +
+        '<div class="text-xs dim">' + p.date + " · " + p.score + "/" + p.total + " · rank #" + p.rank + "</div></div>" +
+        '<span class="badge badge-cyan">' + pct + "%</span>" +
+        '<b style="color:var(--teal);white-space:nowrap">+' + p.ratingGain + "</b>" +
+      "</div>"
+    );
+  }).join("") || '<p class="muted">No contests yet — enter the next arena contest!</p>';
+
+  /* share */
+  document.getElementById("pf-share").addEventListener("click", function () {
+    if (navigator.share) {
+      navigator.share({ title: "My VARTALAB profile", text: "Aarav Sharma · Rating " + u.rating + " · Level " + u.selfLevel }).catch(function () {});
+    } else {
+      const link = location.origin + location.pathname;
+      if (navigator.clipboard) navigator.clipboard.writeText(link).then(function () {
+        window.VT.toast("Profile link copied to clipboard", "success", "Share");
+      });
+      else window.VT.toast("Demo sharing — paste this link: " + link, "info");
+    }
+  });
+
+  /* privacy toggle */
+  const privBtn = document.getElementById("pf-privacy");
+  function renderPrivacy() {
+    privBtn.innerHTML = u.profilePublic ? "🌐 Profile: Public" : "🔒 Profile: Private";
+  }
+  privBtn.addEventListener("click", function () {
+    u.profilePublic = !u.profilePublic;
+    window.VT.saveState();
+    renderPrivacy();
+    window.VT.toast(u.profilePublic ? "Your profile is now visible to the community." : "Your profile is now hidden from the community.", "success", "Privacy updated");
+  });
+  renderPrivacy();
+
+  /* log out → back to login */
+  document.getElementById("pf-logout").addEventListener("click", function () {
+    window.VT.logout();
+    window.VT.toast("You've been signed out. See you soon!", "info", "Signed out");
+    setTimeout(function () { location.href = "login.html"; }, 500);
+  });
+
+  /* responsive: stack grid on small screens */
+  const mq = window.matchMedia("(max-width: 860px)");
+  function onMq(e) {
+    grid.style.gridTemplateColumns = e.matches ? "1fr" : "340px 1fr";
+  }
+  onMq(mq);
+  mq.addEventListener("change", onMq);
+})();
+</script>
+</body>
+</html>

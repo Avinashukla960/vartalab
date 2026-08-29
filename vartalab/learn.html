@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Learn — VARTALAB</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%236d5cff'/><text x='50' y='72' font-size='62' font-weight='bold' font-family='Arial' fill='white' text-anchor='middle'>V</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: { base:'#0b0f1a', card:'#151b2b', accent:'#6d5cff', cyan2:'#22d3ee' } } } };
+</script>
+<link rel="stylesheet" href="css/style.css">
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</head>
+<body>
+<main>
+  <section class="section" style="padding-top:44px">
+    <div class="wrap">
+      <!-- Greeting + ring + goal -->
+      <div class="grid g3" style="align-items:start">
+        <div class="card card-cta" style="grid-column: span 2">
+          <div class="flex" style="gap:16px">
+            <span class="avatar avatar-lg">😀</span>
+            <div class="grow">
+              <span class="eyebrow">Your dashboard</span>
+              <h2 style="margin:.1em 0">Hey, Aarav Sharma 👋</h2>
+              <p class="muted text-sm" style="margin:0">Goal: <b class="text-accent">IELTS</b> · Level <b class="text-accent">B1+</b> · <span id="learn-date"></span></p>
+            </div>
+          </div>
+          <div class="grid g3 mt-3" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+            <div class="card card-flat center" style="padding:14px"><b style="font-size:1.3rem;color:var(--amber)">🔥 14</b><div class="text-xs dim">Day streak</div></div>
+            <div class="card card-flat center" style="padding:14px"><b style="font-size:1.3rem;color:var(--cyan)">1620</b><div class="text-xs dim">Rating</div></div>
+            <div class="card card-flat center" style="padding:14px"><b style="font-size:1.3rem;color:var(--teal)">#231</b><div class="text-xs dim">Global rank</div></div>
+          </div>
+          <div class="mt-3 flex" style="gap:10px;flex-wrap:wrap">
+            <a class="btn btn-primary" href="lesson.html?id=1">▶ Continue Learning</a>
+            <a class="btn btn-ghost" href="lesson.html?id=1" data-retry="1">↻ Practice Again</a>
+          </div>
+        </div>
+
+        <!-- Overall progress ring -->
+        <div class="card center" style="display:flex;flex-direction:column;justify-content:center">
+          <span class="eyebrow">Overall progress</span>
+          <div class="mt-2" id="learn-ring"></div>
+          <p class="text-xs muted" style="margin:12px 0 0">"Progress not perfection."</p>
+        </div>
+      </div>
+
+      <!-- Weak areas -->
+      <div class="card mt-3" id="learn-weak" style="display:none">
+        <div class="flex-between">
+          <h3>🎯 Weak areas — let's fix these first</h3>
+          <span class="badge badge-red">Needs practice</span>
+        </div>
+        <div class="flex mt-2" style="gap:10px;flex-wrap:wrap" id="learn-weak-chips"></div>
+        <p class="text-sm muted mt-2" style="margin-bottom:0">Found from your diagnostic, lesson mistakes and mock tests. Pick a lesson below to attack each one.</p>
+      </div>
+
+      <!-- Lesson grid -->
+      <div class="flex-between mt-4 mb-2">
+        <div>
+          <span class="eyebrow">Continue learning</span>
+          <h2 class="mt-1">Grammar lessons</h2>
+        </div>
+        <a class="btn btn-ghost btn-sm" href="lesson.html?id=1">Random lesson 🎲</a>
+      </div>
+      <div class="grid gauto-lg" id="learn-lessons"></div>
+
+      <!-- Categories -->
+      <div class="flex-between mt-4 mb-2">
+        <div>
+          <span class="eyebrow">Skill map</span>
+          <h2 class="mt-1">Your skills</h2>
+        </div>
+      </div>
+      <div class="grid g2" id="learn-skills"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  const u = DB.currentUser;
+  const fmt = new Intl.DateTimeFormat("en-IN", { weekday: "long", day: "numeric", month: "long" });
+  document.getElementById("learn-date").textContent = fmt.format(new Date());
+
+  /* progress ring: lessons completed vs total */
+  const completed = u.completedLessons || [];
+  const pct = Math.round((completed.length / DB.lessons.length) * 100);
+  document.getElementById("learn-ring").innerHTML = window.progressRing(pct, 170, pct + "%", completed.length + " of " + DB.lessons.length + " lessons done");
+  window.animateRings();
+
+  /* weak areas */
+  const weak = u.weakAreas || [];
+  if (weak.length) {
+    document.getElementById("learn-weak").style.display = "";
+    document.getElementById("learn-weak-chips").innerHTML = weak.map(function (w) {
+      return '<a class="chip" href="learn.html#lesson-' + encodeURIComponent(w.toLowerCase()) + '">⚠️ ' + window.esc(w) + "</a>";
+    }).join("");
+  }
+
+  /* lessons grid */
+  document.getElementById("learn-lessons").innerHTML = DB.lessons.map(function (l) {
+    const done = completed.includes(l.id);
+    return (
+      '<a class="card card-hover" href="lesson.html?id=' + l.id + '" style="text-decoration:none;color:inherit">' +
+        '<div class="flex-between">' +
+          window.skillBadge(l.skill) + window.diffBadge(l.difficulty) +
+        "</div>" +
+        '<h3 class="mt-2" style="font-size:1.05rem">' + window.esc(l.title) + (done ? ' <span class="badge badge-green">✓ Done</span>' : "") + "</h3>" +
+        '<p class="muted text-sm" style="min-height:3.2em">' + window.esc(l.explanation.slice(0, 90)) + "…</p>" +
+        '<div class="flex-between mt-2">' +
+          '<span class="badge badge-amber">⚡ +' + l.xp + " XP</span>" +
+          '<span class="btn btn-sm ' + (done ? "btn-ghost" : "btn-primary") + '">' + (done ? "Practice Again" : "Start Lesson") + " →</span>" +
+        "</div>" +
+      "</a>"
+    );
+  }).join("");
+
+  /* skills bars */
+  document.getElementById("learn-skills").innerHTML = Object.keys(u.skills).map(function (k) {
+    const v = u.skills[k];
+    const barCls = v < 50 ? "pink" : v < 75 ? "amber" : "teal";
+    return (
+      '<div class="card card-flat">' +
+        '<div class="flex-between"><b class="text-sm">' + k + "</b><span class='text-xs dim'>" + (v < 50 ? "Needs work" : v < 75 ? "Getting there" : "Strong") + "</span></div>" +
+        '<div class="progress mt-2"><div class="progress-fill ' + barCls + '" style="width:' + v + '%"></div></div>' +
+        '<div class="skill-row mt-2" style="grid-template-columns:1fr"><span class="pct" style="text-align:right">' + v + "%</span></div>" +
+      "</div>"
+    );
+  }).join("");
+
+  /* Retry button behaviour */
+  document.querySelector('[data-retry="1"]').addEventListener("click", function (e) {
+    e.preventDefault();
+    // Practice Again → start the lesson fresh (it resets local wrong-tracker anyway)
+    location.href = "lesson.html?id=1&practice=1";
+  });
+})();
+</script>
+</body>
+</html>

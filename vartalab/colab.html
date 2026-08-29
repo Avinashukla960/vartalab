@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CO-LAB — VARTALAB</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%236d5cff'/><text x='50' y='72' font-size='62' font-weight='bold' font-family='Arial' fill='white' text-anchor='middle'>V</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: { base:'#0b0f1a', card:'#151b2b', accent:'#6d5cff', cyan2:'#22d3ee' } } } };
+</script>
+<link rel="stylesheet" href="css/style.css">
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</head>
+<body>
+<main>
+  <section class="section" style="padding-top:44px">
+    <div class="wrap">
+      <div class="flex-between mb-4">
+        <div>
+          <span class="eyebrow">Community</span>
+          <h2>🤝 CO-LAB</h2>
+          <p class="muted" style="margin:6px 0 0">Learn together. Join communities by goal and level, hop into sessions, and ask anything.</p>
+        </div>
+        <button class="btn btn-primary" id="cl-create">+ Start a community</button>
+      </div>
+
+      <div class="tab-row mb-3" id="cl-filters">
+        <button class="tab active" data-f="All">All</button>
+        <button class="tab" data-f="IELTS">IELTS</button>
+        <button class="tab" data-f="Interview">Interview</button>
+        <button class="tab" data-f="Higher studies">Boards</button>
+        <button class="tab" data-f="Speaking">Speaking</button>
+        <button class="tab" data-f="Grammar">Grammar</button>
+      </div>
+
+      <div class="grid gauto-lg" id="cl-grid"></div>
+
+      <!-- sessions -->
+      <div class="flex-between mt-4 mb-2">
+        <div><span class="eyebrow">Live & upcoming</span><h3 class="mt-1">Session cards</h3></div>
+      </div>
+      <div class="grid gauto" id="cl-sessions"></div>
+
+      <!-- discussion feed -->
+      <div class="flex-between mt-4 mb-2">
+        <div><span class="eyebrow">Discussions</span><h3 class="mt-1">Community feed</h3></div>
+      </div>
+      <div class="grid g2" style="grid-template-columns:1.6fr 1fr;align-items:start" id="cl-feed-grid">
+        <div id="cl-feed"></div>
+        <div class="card">
+          <h3>✍️ Post an update</h3>
+          <div class="field mt-2"><select class="select" id="cl-feed-community"></select></div>
+          <div class="field"><textarea class="textarea" id="cl-feed-text" placeholder="Share a win, ask a doubt, drop a tip…"></textarea></div>
+          <button class="btn btn-primary btn-block" id="cl-feed-post">Post to community</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  const joined = new Set();
+
+  function renderCommunities(filter) {
+    const list = DB.communities.filter(function (m) { return filter === "All" || m.goal === filter || m.topic === filter; });
+    document.getElementById("cl-grid").innerHTML = list.map(function (m) {
+      const isJoined = joined.has(m.id);
+      return (
+        '<div class="card card-hover">' +
+          '<div class="flex-between">' +
+            '<span style="font-size:1.9rem">' + m.icon + "</span>" +
+            '<span class="badge badge-cyan">' + m.members.toLocaleString("en-IN") + " members</span>" +
+          "</div>" +
+          "<h3 class='mt-2' style='font-size:1.02rem'>" + window.esc(m.name) + "</h3>" +
+          '<div class="flex text-xs" style="gap:8px;flex-wrap:wrap">' +
+            '<span class="badge badge-accent">🎯 ' + window.esc(m.goal) + "</span>" +
+            '<span class="badge badge-dim">' + window.esc(m.level) + "</span>" +
+            '<span class="badge badge-dim">' + window.esc(m.topic) + "</span>" +
+          "</div>" +
+          '<p class="muted text-sm" style="min-height:3.2em">' + window.esc(m.desc) + "</p>" +
+          '<div class="flex" style="gap:8px">' +
+            '<button class="btn ' + (isJoined ? "btn-green" : "btn-primary") + ' btn-sm grow" data-join="' + m.id + '">' + (isJoined ? "✓ Joined" : "Join community") + "</button>" +
+            '<button class="btn btn-ghost btn-sm" data-discuss="' + window.esc(m.name) + '">💬 Discuss</button>' +
+          "</div>" +
+        "</div>"
+      );
+    }).join("") || '<div class="empty-state" style="grid-column:1/-1"><div class="e-icon">🤝</div><b>No communities for this filter yet</b></div>';
+  }
+
+  function renderSessions() {
+    document.getElementById("cl-sessions").innerHTML = DB.sessions.map(function (s) {
+      return (
+        '<div class="card card-flat">' +
+          '<div class="flex-between"><span class="badge ' + (s.online ? "badge-cyan" : "badge-amber") + '">' + (s.online ? "🌐 Online" : "📍 Offline") + "</span>" +
+          '<span class="text-xs dim">' + s.left + " seats left</span></div>" +
+          "<h3 class='mt-2' style='font-size:1rem'>" + window.esc(s.title) + "</h3>" +
+          '<p class="text-xs muted">' + window.esc(s.community) + " · Host: " + window.esc(s.host) + "</p>" +
+          '<div class="flex-between mt-2">' +
+            '<span class="text-sm" style="color:var(--cyan)">' + window.VT.icon("clock", 14) + " " + window.esc(s.time) + "</span>" +
+            '<button class="btn btn-ghost btn-sm" data-book="' + s.id + '">Book seat</button>' +
+          "</div>" +
+        "</div>"
+      );
+    }).join("");
+  }
+
+  function renderFeed() {
+    document.getElementById("cl-feed").innerHTML = DB.feed.map(function (p) {
+      return (
+        '<div class="card card-flat post-card">' +
+          '<span class="avatar">' + p.avatar + "</span>" +
+          '<div class="grow">' +
+            '<div class="flex-between"><b class="text-sm">' + window.esc(p.author) + "</b><span class='text-xs dim'>" + p.time + "</span></div>" +
+            '<span class="text-xs" style="color:var(--accent-3)">' + window.esc(p.community) + "</span>" +
+            '<p class="text-sm mt-1" style="margin-bottom:.4em">' + window.esc(p.text) + "</p>" +
+            '<div class="flex text-xs muted" style="gap:16px">' +
+              '<button class="btn btn-ghost btn-sm" data-like="' + p.id + '" style="padding:4px 10px">❤️ ' + p.likes + "</button>" +
+              '<button class="btn btn-ghost btn-sm" data-reply="' + p.id + '" style="padding:4px 10px">💬 ' + p.replies + " replies</button>" +
+            "</div>" +
+          "</div>" +
+        "</div>"
+      );
+    }).join("");
+  }
+
+  document.querySelectorAll("#cl-filters .tab").forEach(function (t) {
+    t.addEventListener("click", function () {
+      document.querySelectorAll("#cl-filters .tab").forEach(function (x) { x.classList.remove("active"); });
+      t.classList.add("active");
+      renderCommunities(t.getAttribute("data-f"));
+    });
+  });
+
+  document.addEventListener("click", function (e) {
+    const join = e.target.closest("[data-join]");
+    if (join) {
+      const id = Number(join.getAttribute("data-join"));
+      const m = DB.communities.find(function (x) { return x.id === id; });
+      if (joined.has(id)) { window.VT.toast("You left " + m.name, "info", "CO-LAB"); joined.delete(id); }
+      else { joined.add(id); window.VT.toast("Welcome to " + m.name + "!", "success", "CO-LAB"); }
+      renderCommunities(document.querySelector("#cl-filters .tab.active").getAttribute("data-f"));
+      return;
+    }
+    const disc = e.target.closest("[data-discuss]");
+    if (disc) {
+      const name = disc.getAttribute("data-discuss");
+      window.VT.toast("Opening #" + name + " discussion…", "info");
+      document.getElementById("cl-feed-community").value = name;
+      document.getElementById("cl-feed-grid").scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+    const book = e.target.closest("[data-book]");
+    if (book) {
+      const s = DB.sessions.find(function (x) { return x.id === Number(book.getAttribute("data-book")); });
+      window.VT.toast("Seat booked for “" + s.title + "” 🎉", "success", "Session booked");
+      return;
+    }
+    const like = e.target.closest("[data-like]");
+    if (like) {
+      const p = DB.feed.find(function (x) { return x.id === Number(like.getAttribute("data-like")); });
+      p.likes++; renderFeed();
+      return;
+    }
+    const reply = e.target.closest("[data-reply]");
+    if (reply) {
+      window.VT.toast("Replies open soon — start a discussion in a community!", "info");
+    }
+  });
+
+  document.getElementById("cl-feed-post").addEventListener("click", function () {
+    const text = document.getElementById("cl-feed-text").value.trim();
+    const community = document.getElementById("cl-feed-community").value;
+    if (!text) { window.VT.toast("Write something before posting.", "error", "Empty post"); return; }
+    DB.feed.unshift({
+      id: Date.now(), author: DB.currentUser.name, avatar: DB.currentUser.avatar, community: community,
+      time: "just now", text: text, likes: 0, replies: 0,
+    });
+    document.getElementById("cl-feed-text").value = "";
+    renderFeed();
+    window.VT.toast("Posted to " + community + " 💬", "success", "Published");
+  });
+
+  document.getElementById("cl-create").addEventListener("click", function () {
+    window.VT.toast("Community creation is part of the paid plan in the full product — this is a demo!", "info", "CO-LAB");
+  });
+
+  /* populate the feed's community select from data.js */
+  document.getElementById("cl-feed-community").innerHTML = DB.communities.map(function (m) {
+    return "<option>" + window.esc(m.name) + "</option>";
+  }).join("");
+
+  renderCommunities("All");
+  renderSessions();
+  renderFeed();
+})();
+</script>
+</body>
+</html>
